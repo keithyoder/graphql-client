@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 require "json"
 require "net/http"
+require 'net/http/post/multipart'
 require "uri"
 
 module GraphQL
@@ -55,22 +56,35 @@ module GraphQL
       # context - An arbitrary Hash of values which you can access
       #
       # Returns { "data" => ... , "errors" => ... } Hash.
-      def execute(document:, operation_name: nil, variables: {}, context: {})
-        request = Net::HTTP::Post.new(uri.request_uri)
+      def execute(document:, operation_name: nil, variables: {}, context: {}, file: nil)
+        if file
+          request = Net::HTTP::Post::Multipart.new(
+            uri.request_uri,
+            {
+              "operations": { query: document.to_query_string, variables: variables }.to_json,
+              "map": { "0": ["variables.file"] }.to_json,
+              "0": file
+            }
+          )
+        else
+          request = Net::HTTP::Post.new(uri.request_uri)
+          request["Content-Type"] = "application/json"
+          body = {} 
+          body["query"] = document.to_query_string
+          body["variables"] = variables if variables.any?
+          body["operationName"] = operation_name if operation_name
+          request.body = JSON.generate(body)
+        end
 
         request.basic_auth(uri.user, uri.password) if uri.user || uri.password
 
         request["Accept"] = "application/json"
-        request["Content-Type"] = "application/json"
         headers(context).each { |name, value| request[name] = value }
 
-        body = {}
-        body["query"] = document.to_query_string
-        body["variables"] = variables if variables.any?
-        body["operationName"] = operation_name if operation_name
-        request.body = JSON.generate(body)
+        response = connection.start do |http|
+          http.request(request)
+        end
 
-        response = connection.request(request)
         case response
         when Net::HTTPOK, Net::HTTPBadRequest
           JSON.parse(response.body)

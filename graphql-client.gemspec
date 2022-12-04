@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency "activesupport", ">= 3.0"
   s.add_dependency "graphql"
+  s.add_dependency "multipart-post"
 
   s.add_development_dependency "actionpack", ">= 3.2.22"
   s.add_development_dependency "erubi", "~> 1.6"

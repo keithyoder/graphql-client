@@ -329,7 +329,7 @@ module GraphQL
 
     attr_reader :document
 
-    def query(definition, variables: {}, context: {})
+    def query(definition, variables: {}, context: {}, file: nil)
       raise NotImplementedError, "client network execution not configured" unless execute
 
       unless definition.is_a?(OperationDefinition)
@@ -358,7 +358,8 @@ module GraphQL
           document: document,
           operation_name: operation.name,
           variables: variables,
-          context: context
+          context: context,
+          file: file
         )
       end
 
